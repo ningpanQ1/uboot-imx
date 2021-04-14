@@ -1,0 +1,6 @@
+Advantech i.MX8MM BOARD
+M:	Chang.qing <chang.qing@advantech.com.cn>
+S:	Maintained
+F:	board/advantech/imx8mm_eamb9918
+F:	include/configs/imx8mm_eamb9918.h
+F:	configs/imx8mm_adv_defconfig

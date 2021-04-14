@@ -154,6 +154,11 @@ config TARGET_VERDIN_IMX8MM
        select SUPPORT_SPL
        select IMX8M_LPDDR4
 
+config TARGET_ADV_EAMB9918
+        bool "advantech eamb9918 board"
+        select IMX8MM
+        select SUPPORT_SPL
+        select IMX8M_LPDDR4
 endchoice
 
 source "board/freescale/imx8mq_evk/Kconfig"
@@ -164,5 +169,6 @@ source "board/freescale/imx8mm_val/Kconfig"
 source "board/freescale/imx8mn_evk/Kconfig"
 source "board/freescale/imx8mp_evk/Kconfig"
 source "board/toradex/verdin-imx8mm/Kconfig"
+source "board/advantech/imx8mm_eamb9918/Kconfig"
 
 endif
