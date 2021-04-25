@@ -46,6 +46,11 @@ config IMX_UNIQUE_ID
 	depends on IMX8MQ && IMX_HAB && !SECURE_STICKY_BITS_LOCKUP
 	default 0x0
 
+config ARCH_ADV
+        bool "Advantech arch platform"
+        help
+          Advantech arch.
+
 choice
 	prompt  "NXP i.MX8M board select"
 	optional
@@ -159,6 +164,7 @@ config TARGET_ADV_EAMB9918
         select IMX8MM
         select SUPPORT_SPL
         select IMX8M_LPDDR4
+	select ARCH_ADV
 endchoice
 
 source "board/freescale/imx8mq_evk/Kconfig"
