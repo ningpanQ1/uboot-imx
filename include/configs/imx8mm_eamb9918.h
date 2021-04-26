@@ -294,5 +294,7 @@
 #define LVDS_RESET_PAD		IMX_GPIO_NR(3, 24)
 #define I2S_EN				IMX_GPIO_NR(1, 10)
 #define RESET_OUT			IMX_GPIO_NR(4, 28)
+#define WDOG_TRIG			IMX_GPIO_NR(1, 15)
+#define WDOG_ENABLE			IMX_GPIO_NR(1, 9)
 
 #endif

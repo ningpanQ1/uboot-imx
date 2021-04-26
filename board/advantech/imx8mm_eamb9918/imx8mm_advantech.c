@@ -25,6 +25,8 @@ DECLARE_GLOBAL_DATA_PTR;
 static iomux_v3_cfg_t const uart_pads[] = {
 	IMX8MM_PAD_UART2_RXD_UART2_RX | MUX_PAD_CTRL(UART_PAD_CTRL),
 	IMX8MM_PAD_UART2_TXD_UART2_TX | MUX_PAD_CTRL(UART_PAD_CTRL),
+	/*IMX8MM_PAD_SAI3_TXC_UART2_TX | MUX_PAD_CTRL(UART_PAD_CTRL),
+	IMX8MM_PAD_SAI3_TXFS_UART2_RX | MUX_PAD_CTRL(UART_PAD_CTRL),*/
 };
 
 static iomux_v3_cfg_t const wdog_pads[] = {
@@ -75,6 +77,17 @@ static void setup_misc_io(void)
 	gpio_direction_output(RESET_OUT, 1);
 }
 
+static void setup_iomux_wdt()
+{
+	imx_iomux_v3_setup_pad(IMX8MM_PAD_GPIO1_IO15_GPIO1_IO15| MUX_PAD_CTRL(NO_PAD_CTRL));
+	imx_iomux_v3_setup_pad(IMX8MM_PAD_GPIO1_IO09_GPIO1_IO9| MUX_PAD_CTRL(NO_PAD_CTRL));
+
+	gpio_request(WDOG_ENABLE, "wdt_en");
+	gpio_direction_output(WDOG_ENABLE,0);
+	gpio_request(WDOG_TRIG, "wdt_trig");
+	gpio_direction_output(WDOG_TRIG,1);
+}
+
 #if IS_ENABLED(CONFIG_FEC_MXC)
 static int setup_fec(void)
 {
@@ -119,14 +132,14 @@ int board_init(void)
 
 	//misc io setup
 	setup_misc_io();
+	setup_iomux_wdt();
+
 	return 0;
 }
 
 int board_late_init(void)
 {
-#ifdef CONFIG_ENV_IS_IN_MMC
 	board_late_mmc_env_init();
-#endif
 
 #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
 	env_set("board_name", "EAMB9918-A1");
