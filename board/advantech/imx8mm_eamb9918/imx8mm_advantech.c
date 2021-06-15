@@ -55,6 +55,8 @@ static iomux_v3_cfg_t const gpio_init_pads[] = {
 	IMX8MM_PAD_SAI5_RXD3_GPIO3_IO24 | MUX_PAD_CTRL(NO_PAD_CTRL),	//LVDS_RESET
 	IMX8MM_PAD_GPIO1_IO10_GPIO1_IO10 | MUX_PAD_CTRL(NO_PAD_CTRL),	//I2S_EN
 	IMX8MM_PAD_SAI3_RXFS_GPIO4_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),	//RESET_OUT
+	IMX8MM_PAD_GPIO1_IO14_GPIO1_IO14 | MUX_PAD_CTRL(NO_PAD_CTRL), //M2_PWR_EN
+	IMX8MM_PAD_GPIO1_IO11_GPIO1_IO11 | MUX_PAD_CTRL(NO_PAD_CTRL), //M2_RESET
 };
 
 static void setup_misc_io(void)
@@ -83,6 +85,19 @@ static void setup_misc_io(void)
 	gpio_direction_input(EAMB9918_LCD_SELECT0);
 	gpio_request(EAMB9918_LCD_SELECT1, "lcd_select1");
 	gpio_direction_input(EAMB9918_LCD_SELECT1);
+
+	/* M.2 reset. */
+	gpio_request(M2_RESET, "M2_RESET");
+	gpio_direction_output(M2_RESET, 0);
+	/* M.2 Power Enable */
+	gpio_request(M2_PWR_EN, "M2_PWR_EN");
+	gpio_direction_output(M2_PWR_EN, 0);
+
+	/* we need a > 10 ms delay for power ON the wifi module.*/
+	udelay(20000);
+	gpio_set_value(M2_PWR_EN, 1);
+	udelay(2000);
+	gpio_set_value(M2_RESET, 1);
 }
 
 static void setup_iomux_wdt()

@@ -45,4 +45,9 @@ config TFTP_BLOCKSIZE
 	help
 	  Default TFTP block size.
 
+config MACADDR_FROM_SPIROM
+	bool "macaddress is from spi flash "
+	help
+	  macaddress is from spi flash.
+
 endif   # if NET
