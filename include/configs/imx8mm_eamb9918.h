@@ -289,6 +289,7 @@
 /* misc io */
 #define LVDS_STBY_PAD		IMX_GPIO_NR(3, 23)
 #define LVDS_RESET_PAD		IMX_GPIO_NR(3, 24)
+#define LVDS_BKL_VDD		IMX_GPIO_NR(4, 26)
 #define I2S_EN				IMX_GPIO_NR(1, 10)
 #define RESET_OUT			IMX_GPIO_NR(4, 28)
 #define WDOG_TRIG			IMX_GPIO_NR(1, 15)
