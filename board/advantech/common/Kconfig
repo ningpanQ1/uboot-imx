@@ -42,3 +42,9 @@ config USB_TCPC
 	default n
 	help
 	  Enable USB type-c port controller (TCPC) driver
+
+config ADV_RECOVERY
+	bool "Support advantech OTA recovery solution"
+	default n
+	help
+	  Enable Support advantech OTA recovery solution

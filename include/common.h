@@ -40,6 +40,11 @@
 #include <vsprintf.h>
 #include <net.h>
 #include <bootstage.h>
+
+#ifdef CONFIG_ADV_RECOVERY
+int do_adv_recovery(void);
+#endif
+
 #endif	/* __ASSEMBLY__ */
 
 /* Pull in stuff for the build system */
