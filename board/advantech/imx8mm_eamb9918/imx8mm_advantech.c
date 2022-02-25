@@ -58,6 +58,7 @@ static iomux_v3_cfg_t const gpio_init_pads[] = {
 	IMX8MM_PAD_SAI3_RXFS_GPIO4_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),	//RESET_OUT
 	IMX8MM_PAD_GPIO1_IO14_GPIO1_IO14 | MUX_PAD_CTRL(NO_PAD_CTRL), //M2_PWR_EN
 	IMX8MM_PAD_GPIO1_IO11_GPIO1_IO11 | MUX_PAD_CTRL(NO_PAD_CTRL), //M2_RESET
+	IMX8MM_PAD_UART2_TXD_GPIO5_IO25  | MUX_PAD_CTRL(NO_PAD_CTRL), //SPI3_CS
 };
 
 static void setup_misc_io(void)
@@ -101,6 +102,9 @@ static void setup_misc_io(void)
 	gpio_set_value(M2_PWR_EN, 1);
 	udelay(2000);
 	gpio_set_value(M2_RESET, 1);
+
+	gpio_request(153, "cs");
+	gpio_direction_output(153, 1);
 }
 
 static void setup_iomux_wdt()
@@ -332,7 +336,7 @@ int get_switch_mode(){
 	}
 
 	if(mode0 == 0 && mode1 == 0){
-		return 2;
+		return 0;
 	}else if (mode0 == 1 && mode1 == 0){
 		return 1;
 	}else if (mode0 == 0 && mode1 == 1){
