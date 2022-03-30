@@ -54,6 +54,11 @@ config IMX8M_MCU_RDC_STOP_CONFIG_ADDR
 	hex "Start address of mcu rdc config when mcu stops"
 	default 0x187000
 
+config ARCH_ADV
+        bool "Advantech arch platform"
+        help
+          Advantech arch.
+
 choice
 	prompt  "NXP i.MX8M board select"
 	optional
@@ -259,6 +264,16 @@ config TARGET_PHYCORE_IMX8MP
 	select IMX8MP
         select SUPPORT_SPL
 	select IMX8M_LPDDR4
+
+config TARGET_ADV_EAMB9918
+	bool "advantech eamb9918 board"
+	select IMX8MM
+	select SUPPORT_SPL
+	select IMX8M_LPDDR4
+	select FSL_CAAM
+	select FSL_BLOB
+	select MISC
+	select SPL_CRYPTO_SUPPORT if SPL
 endchoice
 
 source "board/freescale/imx8mq_evk/Kconfig"
@@ -276,5 +291,6 @@ source "board/beacon/imx8mm/Kconfig"
 source "board/beacon/imx8mn/Kconfig"
 source "board/phytec/phycore_imx8mm/Kconfig"
 source "board/phytec/phycore_imx8mp/Kconfig"
+source "board/advantech/imx8mm_eamb9918/Kconfig"
 
 endif

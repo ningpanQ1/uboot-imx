@@ -852,7 +852,12 @@ dtb-$(CONFIG_ARCH_IMX8) += \
 	fsl-imx8dxl-ddr3-evk.dtb \
 	imx8-deneb.dtb \
 	imx8-giedi.dtb
+ifdef CONFIG_ARCH_ADV
+dtb-$(CONFIG_ARCH_ADV) += \
+	imx8mm-evk.dtb \
+	imx8mm-adv-eamb9918-a1.dtb
 
+else
 dtb-$(CONFIG_ARCH_IMX8M) += \
 	imx8mm-evk.dtb \
 	imx8mm-evk-qca-wifi.dtb \
@@ -883,6 +888,7 @@ dtb-$(CONFIG_ARCH_IMX8M) += \
 	imx8mn-ddr4-ab2.dtb \
 	imx8mn-ddr3l-ab2.dtb \
 	imx8mn-ab2.dtb
+endif
 
 dtb-$(CONFIG_ARCH_IMXRT) += imxrt1050-evk.dtb \
 	imxrt1020-evk.dtb
