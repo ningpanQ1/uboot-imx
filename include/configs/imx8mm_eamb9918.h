@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
- * Copyright 2019 NXP
+ * Copyright 2022 Advantech
  */
 
-#ifndef __IMX8MM_EVK_H
-#define __IMX8MM_EVK_H
+#ifndef __IMX8MM_EAMB9918_H
+#define __IMX8MM_EAMB9918_H
 
 #include <linux/sizes.h>
 #include <linux/stringify.h>
@@ -150,21 +150,45 @@
 	"mmcpart=" __stringify(CONFIG_SYS_MMC_IMG_LOAD_PART) "\0" \
 	"mmcroot=" CONFIG_MMCROOT " rootwait rw\0" \
 	"mmcautodetect=yes\0" \
+	"initrd_part=2\0" \
+	"initrd_file=initrd.img\0" \
+	"boot_with_initrd=no\0" \
 	"mmcargs=setenv bootargs ${jh_clk} console=${console} root=${mmcroot}\0 " \
 	"loadbootscript=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bsp_script};\0" \
 	"bootscript=echo Running bootscript from mmc ...; " \
 		"source\0" \
 	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
 	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr_r} ${fdtfile}\0" \
+	"loadinitrd=fatload mmc ${mmcdev}:${initrd_part} ${initrd_addr} ${initrd_file}\0" \
 	"mmcboot=echo Booting from mmc ...; " \
 		"run mmcargs; " \
 		"if test ${boot_fit} = yes || test ${boot_fit} = try; then " \
 			"bootm ${loadaddr}; " \
 		"else " \
-			"if run loadfdt; then " \
-				"booti ${loadaddr} - ${fdt_addr_r}; " \
+			"if test ${boot_with_initrd} = yes; then " \
+				"echo Boot with initrd.; " \
+				"if run loadinitrd; then " \
+					"if run loadfdt; then " \
+						"booti ${loadaddr} ${initrd_addr} ${fdt_addr_r}; " \
+					"else " \
+						"echo WARN: Cannot load the DT; " \
+					"fi; " \
+				"else " \
+					"echo WARN: Cannot load the ${initrd_file}; " \
+					"echo WARN: Boot with initrd failed, enter without initrd mode! ; " \
+					"if run loadfdt; then " \
+						"booti ${loadaddr} - ${fdt_addr_r}; " \
+					"else " \
+						"echo WARN: Cannot load the DT; " \
+					"fi; " \
+				"fi; " \
 			"else " \
-				"echo WARN: Cannot load the DT; " \
+				"echo Boot without initrd.; " \
+				"if run loadfdt; then " \
+					"booti ${loadaddr} - ${fdt_addr_r}; " \
+				"else " \
+					"echo WARN: Cannot load the DT; " \
+				"fi; " \
 			"fi; " \
 		"fi;\0" \
 	"netargs=setenv bootargs ${jh_clk} console=${console} " \
@@ -219,7 +243,7 @@
 #define CONFIG_ENV_SPI_MAX_HZ		CONFIG_SF_DEFAULT_SPEED
 #endif
 #define CONFIG_SYS_MMC_ENV_DEV		1   /* USDHC2 */
-#define CONFIG_MMCROOT			"/dev/mmcblk1p2"  /* USDHC2 */
+#define CONFIG_MMCROOT			"/dev/mmcblk1p3"  /* USDHC2 */
 
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		SZ_32M

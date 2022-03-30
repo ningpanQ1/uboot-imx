@@ -71,6 +71,7 @@
 #include <linux/err.h>
 #include <efi_loader.h>
 #include <wdt.h>
+#include <env.h>
 #if defined(CONFIG_GPIO_HOG)
 #include <asm/gpio.h>
 #endif
@@ -80,8 +81,25 @@
 #ifdef CONFIG_FSL_FASTBOOT
 #include <fb_fsl.h>
 #endif
+#ifdef   CONFIG_MACADDR_FROM_SPIROM
+#include <spi_flash.h>
+#endif
 
 DECLARE_GLOBAL_DATA_PTR;
+
+#ifdef CONFIG_MACADDR_FROM_SPIROM
+#ifndef CONFIG_SYS_MAX_MAC_NUM
+#define CONFIG_SYS_MAX_MAC_NUM  1
+#endif
+
+struct boardcfg_t {
+	char board_ver[16];
+	unsigned char num_mac;
+	unsigned char sn[10];
+	unsigned char Manufacturing_Time[14];
+	unsigned char mac[CONFIG_SYS_MAX_MAC_NUM*6];
+};
+#endif
 
 ulong monitor_flash_len;
 
@@ -528,6 +546,85 @@ static int initr_scsi(void)
 }
 #endif
 
+#ifdef CONFIG_MACADDR_FROM_SPIROM
+#define XMK_STR(x)	#x
+#define MK_STR(x)	XMK_STR(x)
+
+static int check_mac_and_setenv(u32 ethidx, u8 mac[])
+{
+	char print_buf[32], eth_name[20];
+
+	if(!mac)
+		return -1;
+
+	if(ethidx == 0){
+		sprintf(eth_name,"ethaddr");
+	}else{
+		sprintf(eth_name,"eth%uaddr", ethidx);
+	}
+
+	/* This is vailed ?*/
+	if(!is_valid_ethaddr(mac)) {
+		printf("%s MAC address is invailed !!\n", eth_name);
+		sprintf(print_buf,"00:04:9F:01:30:E0");
+		printf("Use default MAC adderss:%s\n",print_buf);
+		env_set(eth_name,print_buf);
+		return 0;
+	}
+
+	sprintf(print_buf, "%pM", mac);
+	printf ("MAC addr = %s\n", print_buf);
+
+	if( (strcmp (env_get(eth_name), print_buf) != 0) || (env_get(eth_name) == NULL)
+			|| (strcmp (env_get(eth_name), MK_STR(CONFIG_ETHADDR)) == 0) ) {
+			env_set(eth_name, print_buf);
+	}
+
+	return 0;
+}
+
+int boardcfg_get_mac(void)
+{
+	int ret;
+	u32 ethidx;
+	struct boardcfg_t boardcfg;
+	struct spi_flash *info_flash;
+
+#ifdef CONFIG_DM_SPI_FLASH
+	struct udevice *new;
+
+	/* speed and mode will be read from config */
+	ret = spi_flash_probe_bus_cs(CONFIG_SF_DEFAULT_BUS, CONFIG_SF_DEFAULT_CS,
+				CONFIG_SF_DEFAULT_SPEED, CONFIG_SF_DEFAULT_MODE,
+					 &new);
+	if (ret) {
+		return -1;
+	}
+
+	info_flash = dev_get_uclass_priv(new);
+#else
+	info_flash = spi_flash_probe(CONFIG_SF_DEFAULT_BUS, CONFIG_SF_DEFAULT_CS,
+				CONFIG_SF_DEFAULT_SPEED, CONFIG_SF_DEFAULT_MODE);
+#endif
+
+	if (!info_flash)
+		return -1;
+
+	ret = spi_flash_read(info_flash, CONFIG_ENV_OFFSET + 2*CONFIG_ENV_SECT_SIZE,
+				sizeof(boardcfg), &boardcfg);
+	if(ret !=0) {
+		printf("SPI Read fail!!\n");
+		return  -1;
+	}
+
+	for(ethidx =0; ethidx < CONFIG_SYS_MAX_MAC_NUM; ethidx++)
+		check_mac_and_setenv(ethidx, &boardcfg.mac[ethidx*6]);
+
+	spi_flash_free(info_flash);
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_CMD_NET
 static int initr_net(void)
 {
@@ -600,6 +697,28 @@ static int initr_check_fastboot(void)
 {
 	fastboot_run_bootmode();
 	return 0;
+}
+#endif
+
+#ifdef CONFIG_ADV_RECOVERY
+__weak int do_adv_recovery(void){
+	char * recovery_status = env_get("recovery_status");
+
+	if(recovery_status != NULL) {
+		/* System will enter recovery  mode. */
+		printf("Boot: Recovery!!\n");
+		env_set("initrd_part", "2");
+		env_set("initrd_file", "initrd.img");
+		env_set("boot_with_initrd", "yes");
+	}else {
+		printf("Boot: Normal!!\n");
+		env_set("boot_with_initrd", "no");
+	}
+	return 0;
+}
+
+static int initr_adv_recovery(void){
+	return do_adv_recovery();
 }
 #endif
 
@@ -819,6 +938,9 @@ static init_fnc_t init_sequence_r[] = {
 	INIT_FUNC_WATCHDOG_RESET
 	initr_net,
 #endif
+#ifdef CONFIG_MACADDR_FROM_SPIROM
+	boardcfg_get_mac,	/* Get MAC address from SPI */
+#endif
 #ifdef CONFIG_POST
 	initr_post,
 #endif
@@ -856,6 +978,10 @@ static init_fnc_t init_sequence_r[] = {
 #ifdef CONFIG_DUAL_BOOTLOADER
 	initr_check_spl_recovery,
 #endif
+#ifdef CONFIG_ADV_RECOVERY
+	initr_adv_recovery,
+#endif
+
 	run_main_loop,
 };
 

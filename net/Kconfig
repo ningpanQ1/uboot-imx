@@ -88,4 +88,9 @@ config SERVERIP_FROM_PROXYDHCP_DELAY_MS
 		receiving response from main DHCP server. Has no effect if
 		SERVERIP_FROM_PROXYDHCP is false.
 
+config MACADDR_FROM_SPIROM
+	bool "macaddress is from spi flash "
+	help
+	  macaddress is from spi flash.
+
 endif   # if NET

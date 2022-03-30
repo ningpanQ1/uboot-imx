@@ -274,6 +274,7 @@ config TARGET_ADV_EAMB9918
 	select FSL_BLOB
 	select MISC
 	select SPL_CRYPTO_SUPPORT if SPL
+	select ARCH_ADV
 endchoice
 
 source "board/freescale/imx8mq_evk/Kconfig"

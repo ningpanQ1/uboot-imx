@@ -650,6 +650,12 @@ config ANDROID_AB
 	  allows a bootloader to try a new version of the system but roll back
 	  to previous version if the new one didn't boot all the way.
 
+config ADV_RECOVERY
+	bool "Support advantech OTA recovery solution"
+	default n
+	help
+	  Enable Support advantech OTA recovery solution
+
 endmenu
 
 menu "Blob list"
