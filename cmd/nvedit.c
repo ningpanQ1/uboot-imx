@@ -320,6 +320,339 @@ int env_set(const char *varname, const char *varvalue)
 		return _do_env_set(0, 3, (char * const *)argv, H_PROGRAMMATIC);
 }
 
+#define VARVALUE_BUF_SIZE	512
+
+char *env_exist(const char *varname, const char *varvalue)
+{
+	int len;
+	char *oldvalue, *p;
+	char buf[VARVALUE_BUF_SIZE];
+
+	/* before import into hashtable */
+	if (!(gd->flags & GD_FLG_ENV_READY) || !varname)
+		return NULL;
+
+	oldvalue = env_get(varname);
+	if (oldvalue) {
+		if (strlen(varvalue) > VARVALUE_BUF_SIZE) {
+			debug("%s: '%s' is too long than 512\n",
+			       __func__, varvalue);
+			return NULL;
+		}
+
+		/* Match middle one ? */
+		snprintf(buf, VARVALUE_BUF_SIZE, " %s ", varvalue);
+		p = strstr(oldvalue, buf);
+		if (p) {
+			debug("%s: '%s' is already exist in '%s'(middle)\n",
+			      __func__, varvalue, varname);
+			return (p + 1);
+		} else {
+			debug("%s: not find in middle one\n", __func__);
+		}
+
+		/* Match last one ? */
+		snprintf(buf, VARVALUE_BUF_SIZE, " %s", varvalue);
+		p = strstr(oldvalue, buf);
+		if (p) {
+			if (*(p + strlen(varvalue) + 1) == '\0') {
+				debug("%s: '%s' is already exist in '%s'(last)\n",
+				      __func__, varvalue, varname);
+				return (p + 1);
+			}
+		} else {
+			debug("%s: not find in last one\n", __func__);
+		}
+
+		/* Match first one ? */
+		snprintf(buf, VARVALUE_BUF_SIZE, "%s ", varvalue);
+		p = strstr(oldvalue, buf);
+		if (p) {
+			len = strstr(p, " ") - oldvalue;
+			if (len == strlen(varvalue)) {
+				debug("%s: '%s' is already exist in '%s'(first)\n",
+				      __func__, varvalue, varname);
+				return p;
+			}
+		} else  {
+			debug("%s: not find in first one\n", __func__);
+		}
+	}
+
+	return NULL;
+}
+
+static int env_append(const char *varname, const char *varvalue)
+{
+	int len = 0;
+	char *oldvalue, *newvalue;
+
+	/* before import into hashtable */
+	if (!(gd->flags & GD_FLG_ENV_READY) || !varname)
+		return 1;
+
+	if (env_exist(varname, varvalue))
+		return 0;
+
+	if (varvalue)
+		len += strlen(varvalue);
+
+	oldvalue = env_get(varname);
+	if (oldvalue)
+		len += strlen(oldvalue);
+
+	newvalue = malloc(len + 2);
+	if (!newvalue) {
+		debug("Error: malloc in %s failed!\n", __func__);
+		return 1;
+	}
+
+	*newvalue = '\0';
+
+	if (oldvalue) {
+		strcpy(newvalue, oldvalue);
+		strcat(newvalue, " ");
+	}
+
+	if (varvalue)
+		strcat(newvalue, varvalue);
+	
+	env_set(varname, newvalue);
+	free(newvalue);
+
+	return 0;
+}
+
+static int env_replace(const char *varname, const char *substr,
+		       const char *replacement)
+{
+	char *oldvalue, *newvalue, *dst, *sub;
+	int substr_len, replace_len, oldvalue_len, len;
+
+	/* before import into hashtable */
+	if (!(gd->flags & GD_FLG_ENV_READY) || !varname)
+		return 1;
+
+	oldvalue = env_get(varname);
+	if (!oldvalue)
+		return 1;
+
+	sub = strstr(oldvalue, substr);
+	if (!sub)
+		return 1;
+
+	oldvalue_len = strlen(oldvalue) + 1;
+	substr_len = strlen(substr);
+	replace_len = strlen(replacement);
+
+	if (replace_len >= substr_len)
+		len = oldvalue_len + replace_len - substr_len;
+	else
+		len = oldvalue_len + substr_len - replace_len;
+
+	newvalue = malloc(len);
+	if (!newvalue) {
+		debug("Error: malloc in %s failed!\n", __func__);
+		return 1;
+	}
+
+	*newvalue = '\0';
+
+	/*
+	 * Orignal string is splited like format: [str1.. substr str2..]
+	 */
+
+	/* str1.. */
+	dst = newvalue;
+	dst = strncat(dst, oldvalue, sub - oldvalue);
+
+	/* substr */
+	dst += sub - oldvalue;
+	dst = strncat(dst, replacement, replace_len);
+
+	/* str2.. */
+	dst += replace_len;
+	len = oldvalue_len - substr_len - (sub - oldvalue);
+	dst = strncat(dst, sub + substr_len, len);
+
+	env_set(varname, newvalue);
+	free(newvalue);
+
+	return 0;
+}
+
+int env_delete(const char *varname, const char *varvalue, int complete_match)
+{
+	const char *str;
+	char *value, *start;
+
+	/* before import into hashtable */
+	if (!(gd->flags & GD_FLG_ENV_READY) || !varname)
+		return 1;
+
+	value = env_get(varname);
+	if (!value)
+		return 0;
+
+	start = complete_match ?
+		env_exist(varname, varvalue) : strstr(value, varvalue);
+	if (!start)
+		return 0;
+
+	/* varvalue is not the last property */
+	str = strstr(start, " ");
+	if (str) {
+		/* Terminate, so cmdline can be dest for strcat() */
+		*start = '\0';
+		/* +1 to skip white space */
+		strcat((char *)value, (str + 1));
+	/* varvalue is the last property */
+	} else {
+		/* skip white space */
+		*(start - 1) = '\0';
+	}
+
+	return 0;
+}
+
+#define ARGS_ITEM_NUM	50
+
+int env_update_filter(const char *varname, const char *varvalue,
+		      const char *ignore)
+{
+	/* 'a_' means "varargs_'; 'v_' means 'varvalue_' */
+	char *varargs;
+	char *a_title, *v_title;
+	char *a_string_tok, *a_item_tok = NULL;
+	char *v_string_tok, *v_item_tok = NULL;
+	char *a_item, *a_items[ARGS_ITEM_NUM] = { NULL };
+	char *v_item, *v_items[ARGS_ITEM_NUM] = { NULL };
+	bool match = false;
+	int i = 0, j = 0;
+
+	/* Before import into hashtable */
+	if (!(gd->flags & GD_FLG_ENV_READY) || !varname)
+		return 1;
+
+	/* If varname doesn't exist, create it and set varvalue */
+	varargs = env_get(varname);
+	if (!varargs) {
+		env_set(varname, varvalue);
+		if (ignore && strstr(varvalue, ignore))
+			env_delete(varname, ignore, 0);
+		return 0;
+	}
+
+	/* Malloc a temporary varargs for strtok */
+	a_string_tok = strdup(varargs);
+	if (!a_string_tok) {
+		debug("Error: strdup in failed, line=%d\n", __LINE__);
+		return 1;
+	}
+
+	/* Malloc a temporary varvalue for strtok */
+	v_string_tok = strdup(varvalue);
+	if (!v_string_tok) {
+		free(a_string_tok);
+		debug("Error: strdup in failed, line=%d\n", __LINE__);
+		return 1;
+	}
+
+	/* Splite varargs into items containing "=" by the blank */
+	a_item = strtok(a_string_tok, " ");
+	while (a_item && i < ARGS_ITEM_NUM) {
+		debug("%s: [a_item %d]: %s\n", __func__, i, a_item);
+		if (strstr(a_item, "="))
+			a_items[i++] = a_item;
+		a_item = strtok(NULL, " ");
+	}
+
+	/*
+	 * Splite varvalue into items containing "=" by the blank.
+	 * parse varvalue title, eg: "bootmode=emmc", title is "bootmode"
+	 */
+	v_item = strtok(v_string_tok, " ");
+	while (v_item && j < ARGS_ITEM_NUM) {
+		debug("%s: <v_item %d>: %s ", __func__, j, v_item);
+
+		/* filter ignore string */
+		if (ignore && strstr(v_item, ignore)) {
+			v_item = strtok(NULL, " ");
+			debug("...ignore\n");
+			continue;
+		}
+
+		if (strstr(v_item, "=")) {
+			debug("\n");
+			v_items[j++] = v_item;
+		} else {
+			debug("... do append\n");
+			env_append(varname, v_item);
+		}
+
+		v_item = strtok(NULL, " ");
+	}
+
+	/* For every v_item, search its title */
+	for (j = 0; j < ARGS_ITEM_NUM && v_items[j]; j++) {
+		v_item = v_items[j];
+		/* Malloc a temporary a_item for strtok */
+		v_item_tok = strdup(v_item);
+		if (!v_item_tok) {
+			debug("Error: strdup in failed, line=%d\n", __LINE__);
+			free(a_string_tok);
+			free(v_string_tok);
+			return 1;
+		}
+		v_title = strtok(v_item_tok, "=");
+		debug("%s: <v_title>: %s\n", __func__, v_title);
+
+		/* For every a_item, search its title */
+		for (i = 0; i < ARGS_ITEM_NUM && a_items[i]; i++) {
+			a_item = a_items[i];
+			/* Malloc a temporary a_item for strtok */
+			a_item_tok = strdup(a_item);
+			if (!a_item_tok) {
+				debug("Error: strdup in failed, line=%d\n", __LINE__);
+				free(a_string_tok);
+				free(v_string_tok);
+				free(v_item_tok);
+				return 1;
+			}
+
+			a_title = strtok(a_item_tok, "=");
+			debug("%s: [a_title]: %s\n", __func__, a_title);
+			if (!strcmp(a_title, v_title)) {
+				/* Find! replace it */
+				env_replace(varname, a_item, v_item);
+				free(a_item_tok);
+				match = true;
+				break;
+			}
+			free(a_item_tok);
+		}
+
+		/* Not find, just append */
+		if (!match) {
+			debug("%s: append '%s' to the '%s' end\n",
+			      __func__, v_item, varname);
+			env_append(varname, v_item);
+		}
+		match = false;
+		free(v_item_tok);
+	}
+
+	free(v_string_tok);
+	free(a_string_tok);
+
+	return 0;
+}
+
+int env_update(const char *varname, const char *varvalue)
+{
+	return env_update_filter(varname, varvalue, NULL);
+}
+
 /**
  * Set an environment variable to an integer value
  *
@@ -905,6 +1238,15 @@ static int do_env_delete(struct cmd_tbl *cmdtp, int flag,
 	return ret;
 }
 
+static int do_env_update(struct cmd_tbl *cmdtp, int flag,
+			 int argc, char *const argv[])
+{
+	if (argc != 3)
+		return CMD_RET_USAGE;
+
+	return env_update(argv[1], argv[2]);
+}
+
 #ifdef CONFIG_CMD_EXPORTENV
 /*
  * env export [-t | -b | -c] [-s size] addr [var ...]
@@ -1351,6 +1693,7 @@ static struct cmd_tbl cmd_env_sub[] = {
 #endif
 	U_BOOT_CMD_MKENT(default, 1, 0, do_env_default, "", ""),
 	U_BOOT_CMD_MKENT(delete, CONFIG_SYS_MAXARGS, 0, do_env_delete, "", ""),
+	U_BOOT_CMD_MKENT(update, 3, 0, do_env_update, "", ""),
 #if defined(CONFIG_CMD_EDITENV)
 	U_BOOT_CMD_MKENT(edit, 2, 0, do_env_edit, "", ""),
 #endif
@@ -1431,6 +1774,7 @@ static char env_help_text[] =
 	"default [-f] -a - [forcibly] reset default environment\n"
 	"env default [-f] var [...] - [forcibly] reset variable(s) to their default values\n"
 	"env delete [-f] var [...] - [forcibly] delete variable(s)\n"
+	"env update [name] [value] - add/append/replace variable(s)\n"
 #if defined(CONFIG_CMD_EDITENV)
 	"env edit name - edit environment variable\n"
 #endif

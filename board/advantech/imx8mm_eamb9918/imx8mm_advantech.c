@@ -186,6 +186,10 @@ int board_late_init(void)
 	env_set("board_name", "EAMB9918-A1");
 	env_set("board_rev", "iMX8MM");
 #endif
+
+#ifdef CONFIG_ADV_RECOVERY
+	detect_sdcard_autoupdate();
+#endif
 	return 0;
 }
 

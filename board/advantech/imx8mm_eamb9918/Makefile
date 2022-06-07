@@ -4,6 +4,9 @@
 # SPDX-License-Identifier:      GPL-2.0+
 #
 ifdef CONFIG_TARGET_ADV_EAMB9918
+ifdef CONFIG_ADV_RECOVERY
+obj-y += auto_update.o
+endif
 obj-y += imx8mm_advantech.o
 obj-y += ../../freescale/common/
 
