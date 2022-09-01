@@ -962,6 +962,12 @@ dtb-$(CONFIG_ARCH_IMX8ULP) += \
 	imx8ulp-9x9-evk.dtb \
 	imx8ulp-9x9-evk-i3c.dtb
 
+ifdef CONFIG_ARCH_ADV
+dtb-$(CONFIG_ARCH_ADV) += \
+	imx8mm-evk.dtb \
+	imx8mm-adv-eamb9918-a1.dtb
+
+else
 dtb-$(CONFIG_ARCH_IMX8M) += \
 	imx8mm-ddr4-evk.dtb \
 	imx8mm-ddr3l-val.dtb \
@@ -999,6 +1005,7 @@ dtb-$(CONFIG_ARCH_IMX8M) += \
 	imx8mp-verdin.dtb \
 	imx8mq-pico-pi.dtb \
 	imx8mq-kontron-pitx-imx8m.dtb
+endif
 
 dtb-$(CONFIG_ARCH_IMXRT) += imxrt1050-evk.dtb \
 	imxrt1020-evk.dtb
