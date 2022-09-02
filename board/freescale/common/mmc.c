@@ -42,8 +42,14 @@ void board_late_mmc_env_init(void)
 	env_set_ulong("mmcdev", dev_no);
 
 	/* Set mmcblk env */
+#ifdef CONFIG_ADV_RECOVERY
+	/* we changed the parttion for OTA recovery. */
+	sprintf(mmcblk, "/dev/mmcblk%dp3 rootwait rw",
+		mmc_map_to_kernel_blk(dev_no));
+#else
 	sprintf(mmcblk, "/dev/mmcblk%dp2 rootwait rw",
 		mmc_map_to_kernel_blk(dev_no));
+#endif
 	env_set("mmcroot", mmcblk);
 
 	sprintf(cmd, "mmc dev %d", dev_no);

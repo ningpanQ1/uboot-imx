@@ -25,6 +25,11 @@
 #include <asm/u-boot.h> /* boot information for Linux kernel */
 #include <display_options.h>
 #include <vsprintf.h>
+
+#ifdef CONFIG_ADV_RECOVERY
+int do_adv_recovery(void);
+#endif
+
 #endif	/* __ASSEMBLY__ */
 
 /* Pull in stuff for the build system */

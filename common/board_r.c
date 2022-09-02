@@ -599,6 +599,28 @@ static int initr_check_fastboot(void)
 }
 #endif
 
+#ifdef CONFIG_ADV_RECOVERY
+__weak int do_adv_recovery(void){
+	char * recovery_status = env_get("recovery_status");
+
+	if(recovery_status != NULL) {
+		/* System will enter recovery  mode. */
+		printf("Boot: Recovery!!\n");
+		env_set("initrd_part", "2");
+		env_set("initrd_file", "initrd.img");
+		env_set("boot_with_initrd", "yes");
+	}else {
+		printf("Boot: Normal!!\n");
+		env_set("boot_with_initrd", "no");
+	}
+	return 0;
+}
+
+static int initr_adv_recovery(void){
+	return do_adv_recovery();
+}
+#endif
+
 #ifdef CONFIG_IMX_TRUSTY_OS
 extern void tee_setup(void);
 static int initr_tee_setup(void)
@@ -849,6 +871,10 @@ static init_fnc_t init_sequence_r[] = {
 #ifdef CONFIG_DUAL_BOOTLOADER
 	initr_check_spl_recovery,
 #endif
+#ifdef CONFIG_ADV_RECOVERY
+	initr_adv_recovery,
+#endif
+
 	run_main_loop,
 };
 
