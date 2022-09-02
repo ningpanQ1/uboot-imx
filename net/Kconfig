@@ -123,4 +123,9 @@ config BOOTP_SERVERIP
 	  variable, not the BOOTP server. This affects the operation of both
 	  bootp and tftp.
 
+config MACADDR_FROM_SPIROM
+	bool "macaddress is from spi flash "
+	help
+	  macaddress is from spi flash.
+
 endif   # if NET
